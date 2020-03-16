@@ -54,9 +54,9 @@ log entry 1
 log entry 2
 ```
 
-`--json` can be to output search result hits as json objects to retrieve all
-fields. A tool like [jq](https://stedolan.github.io/jq/) can be used to format
-or filter fields for display as desired.
+`--json` can be used to output search result hits as json objects and retrieve
+all fields. A tool like [jq](https://stedolan.github.io/jq/) can be used to
+format or filter fields for display as desired.
 
 ```sh
 $ eq --index eq-testing --follow --json | jq --compact-output '._source | {"@timestamp","message"}'
