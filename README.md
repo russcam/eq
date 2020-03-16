@@ -6,7 +6,7 @@ A command line interface to perform queries on
 This project is under development, no guarantees of version compatibility or
 breaking changes at this point.
 
-This is uses the Official Elasticsearch Rust Client
+This uses the Official Elasticsearch Rust Client
 [elasticsearch-rs](https://github.com/elastic/elasticsearch-rs), which is in an
 *alpha* state.
 
@@ -55,14 +55,21 @@ log entry 2
 ```
 
 `--json` can be used to output search result hits as json objects and retrieve
-all fields. A tool like [jq](https://stedolan.github.io/jq/) can be used to
-format or filter fields for display as desired.
+all fields. A tool like [jq](https://stedolan.github.io/jq/) or
+[gron](https://github.com/tomnomnom/gron) can be used to format or filter
+fields for display as desired.
 
 ```sh
 $ eq --index eq-testing --follow --json | jq --compact-output '._source | {"@timestamp","message"}'
 {"@timestamp":"2020-03-10T18:11:38.988Z","message":"log entry 0"}
 {"@timestamp":"2020-03-11T18:11:38.988Z","message":"log entry 1"}
 {"@timestamp":"2020-03-12T18:11:38.988Z","message":"log entry 2"}
+^C
+
+$ eq --index eq-testing --follow --json | gron --stream | grep '_source.message'
+json[0]._source.message = "log entry 0";
+json[1]._source.message = "log entry 1";
+json[2]._source.message = "log entry 2";
 ^C
 ```
 
