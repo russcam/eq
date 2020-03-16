@@ -151,16 +151,16 @@ async fn main() {
     let server = match Url::parse(&opt.address) {
         Ok(url) => url,
         Err(error) => {
-            eprintln!("Could not parse url '{}'.", opt.address);
+            eprintln!("eq: Could not parse url '{}'.", opt.address);
             if opt.debug {
-                eprintln!("Error: {:?}", error);
+                eprintln!("eq: Error: {:?}", error);
             }
             exit(1)
         }
     };
 
     if opt.debug {
-        eprintln!("Using Elasticsearch url '{}'.", server);
+        eprintln!("eq: Using Elasticsearch url '{}'.", server);
     }
 
     let connection_pool = SingleNodeConnectionPool::new(server);
@@ -178,8 +178,8 @@ async fn main() {
     let transport = match transport_builder.build() {
         Ok(transport) => transport,
         Err(error) => {
-            eprintln!("Could not build transport for Elasticsearch.");
-            eprintln!("Error: {:?}", error);
+            eprintln!("eq: Could not build transport for Elasticsearch.");
+            eprintln!("eq: Error: {:?}", error);
             exit(1)
         }
     };
@@ -225,7 +225,7 @@ async fn logs(client: &Elasticsearch, options: QueryOptions) -> Result<usize, Er
         if options.limit != 0 {
             // break if we have reached the limit
             if options.limit <= total_hits {
-                eprintln!("Limit '{}' reached.", options.limit);
+                eprintln!("eq: Limit '{}' reached.", options.limit);
                 break;
             }
 
@@ -256,7 +256,7 @@ async fn logs(client: &Elasticsearch, options: QueryOptions) -> Result<usize, Er
 
 async fn search(client: &Elasticsearch, options: &QueryOptions) -> Response {
     if options.debug {
-        eprintln!("Search options: {:?}", options);
+        eprintln!("eq: Search options: {:?}", options);
     }
 
     // if our limit is smaller than the batch size, use the limit
@@ -323,10 +323,10 @@ async fn verify_response(response_result: Result<Response, Error>) -> Response {
             if response.status_code().is_success() {
                 response
             } else {
-                eprintln!("A query was unsuccessful.");
-                eprintln!("response code: {:?}", response.status_code().as_str());
+                eprintln!("eq: A query was unsuccessful.");
+                eprintln!("eq: response code: {:?}", response.status_code().as_str());
                 eprintln!(
-                    "response body:\n{}",
+                    "eq: response body:\n{}",
                     to_string_pretty(
                         &response
                             .read_body::<Value>()
@@ -339,8 +339,8 @@ async fn verify_response(response_result: Result<Response, Error>) -> Response {
             }
         }
         Err(error) => {
-            eprintln!("A request encountered an error.");
-            eprintln!("{:?}", error);
+            eprintln!("eq: A request encountered an error.");
+            eprintln!("eq: {:?}", error);
             exit(1)
         }
     }

@@ -48,7 +48,7 @@ OPTIONS:
 By default only `_source.message` fields of results are logged to stdout.
 
 ```sh
-$ ./eq --index eq-testing
+$ eq --index eq-testing
 log entry 0
 log entry 1
 log entry 2
@@ -59,7 +59,7 @@ fields. A tool like [jq](https://stedolan.github.io/jq/) can be used to format
 or filter fields for display as desired.
 
 ```sh
-$ ./eq --index eq-testing --follow --json | jq --compact-output '._source | {"@timestamp","message"}'
+$ eq --index eq-testing --follow --json | jq --compact-output '._source | {"@timestamp","message"}'
 {"@timestamp":"2020-03-10T18:11:38.988Z","message":"log entry 0"}
 {"@timestamp":"2020-03-11T18:11:38.988Z","message":"log entry 1"}
 {"@timestamp":"2020-03-12T18:11:38.988Z","message":"log entry 2"}
@@ -70,8 +70,8 @@ $ ./eq --index eq-testing --follow --json | jq --compact-output '._source | {"@t
 DSL](https://www.elastic.co/guide/en/elasticsearch/reference/7.6/query-dsl.html)
 to be used.
 
-```
-$ ./eq --query '
+```sh
+$ eq --query '
 {
   "query": {
     "term": {
@@ -130,7 +130,7 @@ Then run linting with:
 cargo clippy
 ```
 
-Generate documentation for all projects locally:
+Generate documentation for **all** crates locally:
 
 ```sh
 cargo doc
