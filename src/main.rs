@@ -266,7 +266,7 @@ async fn search(
     search_after: Vec<Value>,
 ) -> Response {
     // if our limit is smaller than the batch size, use the limit
-    let size = if options.size > options.limit {
+    let size = if options.size > options.limit && options.limit > 0 {
         options.limit
     } else {
         options.size
@@ -480,6 +480,14 @@ async fn elasticsearch_pagination_test() {
     // verify the right number of search results from the query dsl
     assert_eq!(
         logs(&client, query_dsl_options).await.unwrap(),
+        test_record_count
+    );
+
+    let mut no_limit_query_options = query_string_options.clone();
+    no_limit_query_options.limit = 0;
+
+    assert_eq!(
+        logs(&client, no_limit_query_options).await.unwrap(),
         test_record_count
     );
 }
