@@ -30,10 +30,6 @@ struct Opt {
     #[structopt(short, long, default_value = "100")]
     batch_size: usize,
 
-    /// Activate debug mode
-    #[structopt(short, long)]
-    debug: bool,
-
     /// Follow logs, this polls for new results until canceled
     #[structopt(short, long)]
     follow: bool,
@@ -56,12 +52,16 @@ struct Opt {
     no_certificate_validation: bool,
 
     /// The Elasticsearch password to use
-    #[structopt(short, long, env = "ES_PASSWORD")]
+    #[structopt(short, long, env = "ES_PASSWORD", hide_env_values = true)]
     password: Option<String>,
 
-    /// The query json as a string to search with
-    #[structopt(short, long, default_value = "{}")]
-    query: Value,
+    /// The query string to search with
+    #[structopt(short, long, default_value = "*")]
+    query: String,
+
+    /// The query dsl json to search with, overrides --query if set
+    #[structopt(short = "Q", long, default_value = "{}")]
+    query_dsl: Value,
 
     /// key:value pairs separated by commas to set sorting parameters for query
     #[structopt(short, long, default_value = "@timestamp:asc,_id:asc")]
@@ -70,18 +70,23 @@ struct Opt {
     /// The Elasticsearch username to authenticate as
     #[structopt(short, long, env = "ES_USERNAME")]
     username: Option<String>,
+
+    /// Log extra information to stderr
+    #[structopt(short, long)]
+    verbose: bool,
 }
 
 #[derive(Clone, Debug)]
 struct QueryOptions {
     // elasticsearch-rs api options
+    body: Value,
     index: String,
-    json_body: Value,
+    query_string: String,
     size: usize,
     sort: String,
 
     // eq specific options
-    debug: bool,
+    verbose: bool,
     follow: bool,
     limit: usize,
     print_json: bool,
@@ -152,14 +157,14 @@ async fn main() {
         Ok(url) => url,
         Err(error) => {
             eprintln!("eq: Could not parse url '{}'.", opt.address);
-            if opt.debug {
+            if opt.verbose {
                 eprintln!("eq: Error: {:?}", error);
             }
             exit(1)
         }
     };
 
-    if opt.debug {
+    if opt.verbose {
         eprintln!("eq: Using Elasticsearch url '{}'.", server);
     }
 
@@ -188,9 +193,10 @@ async fn main() {
 
     let options = QueryOptions {
         index: opt.index.to_string(),
-        debug: opt.debug,
+        verbose: opt.verbose,
         size: opt.batch_size,
-        json_body: json!(opt.query),
+        query_string: opt.query.to_string(),
+        body: json!(opt.query_dsl),
         sort: opt.sort.to_string(),
         print_json: opt.json,
         follow: opt.follow,
@@ -205,7 +211,7 @@ async fn main() {
 
 async fn logs(client: &Elasticsearch, options: QueryOptions) -> Result<usize, Error> {
     // do the first search
-    let response = search(&client, &options).await;
+    let response = search(&client, &options, vec![]).await;
 
     // get the result and hit count, print the logs
     let body = response.read_body::<Value>().await.unwrap();
@@ -254,11 +260,11 @@ async fn logs(client: &Elasticsearch, options: QueryOptions) -> Result<usize, Er
     Ok(total_hits)
 }
 
-async fn search(client: &Elasticsearch, options: &QueryOptions) -> Response {
-    if options.debug {
-        eprintln!("eq: Search options: {:?}", options);
-    }
-
+async fn search(
+    client: &Elasticsearch,
+    options: &QueryOptions,
+    search_after: Vec<Value>,
+) -> Response {
     // if our limit is smaller than the batch size, use the limit
     let size = if options.size > options.limit {
         options.limit
@@ -266,10 +272,41 @@ async fn search(client: &Elasticsearch, options: &QueryOptions) -> Response {
         options.size
     };
 
+    let mut body = options.body.clone();
+
+    // if we have an empty search body, use the query_string
+    if body == json!({}) {
+        body = add_to_serde_value(
+            body,
+            "query".to_string(),
+            json!({
+                "query_string": {
+                    "query": options.query_string,
+                }
+            }),
+        );
+    }
+
+    // if we have sort values, add them to the query body
+    if !search_after.is_empty() {
+        // modify the query body to include the "search_after" argument
+        // https://www.elastic.co/guide/en/elasticsearch/reference/7.6/search-request-body.html#request-body-search-search-after
+        body = add_to_serde_value(
+            body.clone(),
+            "search_after".to_string(),
+            json!(search_after),
+        );
+    };
+
+    if options.verbose {
+        eprintln!("eq: Search options: {:?}", options);
+        eprintln!("eq: Search body: {:?}", body.to_string());
+    }
+
     let response_result = client
         .search(SearchParts::Index(&[&options.index]))
         .size(size.try_into().unwrap())
-        .body(&options.json_body)
+        .body(body)
         .sort(&[&options.sort])
         .send()
         .await;
@@ -300,18 +337,18 @@ async fn search_after(
         // modify the query body to include the "search_after" argument
         // https://www.elastic.co/guide/en/elasticsearch/reference/7.6/search-request-body.html#request-body-search-search-after
         let new_body = add_to_serde_value(
-            options.json_body.clone(),
+            options.body.clone(),
             "search_after".to_string(),
             json!(sort_values),
         );
-        options.json_body = new_body;
+        options.body = new_body;
         options
     };
 
     // set the search size to what we were given
     new_options.size = size;
 
-    let response = search(&client, &new_options).await;
+    let response = search(&client, &new_options, sort_values).await;
     let body = response.read_body::<Value>().await.unwrap();
 
     SearchResult::new(body)
@@ -417,10 +454,11 @@ async fn elasticsearch_pagination_test() {
     let options = QueryOptions {
         index: test_index.to_string(),
         size: 1,
-        json_body: json!({}),
+        query_string: "*".to_string(),
+        body: json!({}),
         sort: "@timestamp:asc,_id:asc".to_string(),
         print_json: false,
-        debug: true,
+        verbose: true,
         follow: false,
         limit: 10,
     };

@@ -18,19 +18,19 @@ API for retrieving multiple batches of results. This can be handy for
 interacting with documents such as logs in a terminal.
 
 ```
-eq 0.1.0
+eq 0.2.0
 A simple command line interface for Elasticsearch queries.
 
 USAGE:
     eq [FLAGS] [OPTIONS]
 
 FLAGS:
-    -d, --debug                        Activate debug mode
     -f, --follow                       Follow logs, this polls for new results until canceled
     -h, --help                         Prints help information
     -j, --json                         Print hits as newline delimited json objects, including all fields
     -n, --no-certificate-validation    Do not validate SSL/TLS certificate of server
     -V, --version                      Prints version information
+    -v, --verbose                      Log extra information to stderr
 
 OPTIONS:
     -a, --address <address>          The address of the Elasticsearch server to query [env: ES_ADDRESS=]  [default:
@@ -38,8 +38,9 @@ OPTIONS:
     -b, --batch-size <batch-size>    The number of results to return per batch [default: 100]
     -i, --index <index>              The index to query [default: filebeat-*]
     -l, --limit <limit>              The limit of results to return, 0 means no limit [default: 10000]
-    -p, --password <password>        The Elasticsearch password to use [env: ES_PASSWORD=]
-    -q, --query <query>              The query json as a string to search with [default: {}]
+    -p, --password <password>        The Elasticsearch password to use [env: ES_PASSWORD]
+    -q, --query <query>              The query string to search with [default: *]
+    -Q, --query-dsl <query-dsl>      The query dsl json to search with, overrides --query if set [default: {}]
     -s, --sort <sort>                key:value pairs separated by commas to set sorting parameters for query [default:
                                      @timestamp:asc,_id:asc]
     -u, --username <username>        The Elasticsearch username to authenticate as [env: ES_USERNAME=]
@@ -73,12 +74,20 @@ json[2]._source.message = "log entry 2";
 ^C
 ```
 
-`--query` allows [Elasticsearch Query
+`--query` allows [query string
+syntax](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax)
+to be used.
+
+```sh
+$ eq --query 'agent.hostname: my-server'
+```
+
+`--query-dsl` allows [Elasticsearch Query
 DSL](https://www.elastic.co/guide/en/elasticsearch/reference/7.6/query-dsl.html)
 to be used.
 
 ```sh
-$ eq --query '
+$ eq --query-dsl '
 {
   "query": {
     "term": {
