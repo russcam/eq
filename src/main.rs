@@ -330,25 +330,10 @@ async fn search_after(
     mut options: QueryOptions,
     sort_values: Vec<Value>,
 ) -> SearchResult {
-    // if we have sort values, add them to the query body
-    let mut new_options = if sort_values.is_empty() {
-        options
-    } else {
-        // modify the query body to include the "search_after" argument
-        // https://www.elastic.co/guide/en/elasticsearch/reference/7.6/search-request-body.html#request-body-search-search-after
-        let new_body = add_to_serde_value(
-            options.body.clone(),
-            "search_after".to_string(),
-            json!(sort_values),
-        );
-        options.body = new_body;
-        options
-    };
-
     // set the search size to what we were given
-    new_options.size = size;
+    options.size = size;
 
-    let response = search(&client, &new_options, sort_values).await;
+    let response = search(&client, &options, sort_values).await;
     let body = response.read_body::<Value>().await.unwrap();
 
     SearchResult::new(body)
@@ -436,25 +421,34 @@ async fn elasticsearch_pagination_test() {
             .body(json!({
                 "@timestamp": format!("2020-03-1{}T18:11:38.988Z", i),
                 "message": format!("log entry {}", i),
+                "host": "a",
             }))
-            // trigger a refresh on the latest record so we can immediately
-            // query for the tests
-            .refresh(if i == test_record_count - 1 {
-                Refresh::True
-            } else {
-                Refresh::False
-            })
             .send()
             .await;
 
         verify_response(index_result).await;
     }
+    // add one more record that should not be hit by the searches
+    verify_response(
+        client
+            .index(IndexParts::Index(test_index))
+            .body(json!({
+                "@timestamp": format!("2020-03-1{}T18:11:38.988Z", test_record_count),
+                "message": format!("log entry {}", test_record_count),
+                "host": "b"
+            }))
+            // trigger a refresh on the latest record so we can immediately
+            // query for the tests
+            .refresh(Refresh::True)
+            .send()
+            .await,
+    )
+    .await;
 
-    // set up our query options
-    let options = QueryOptions {
+    let query_string_options = QueryOptions {
         index: test_index.to_string(),
         size: 1,
-        query_string: "*".to_string(),
+        query_string: "host: a".to_string(),
         body: json!({}),
         sort: "@timestamp:asc,_id:asc".to_string(),
         print_json: false,
@@ -465,5 +459,27 @@ async fn elasticsearch_pagination_test() {
 
     // query our test index and see that we saw the full count of records, even with the restricted
     // batch size
-    assert_eq!(logs(&client, options).await.unwrap(), test_record_count);
+    assert_eq!(
+        logs(&client, query_string_options.clone()).await.unwrap(),
+        test_record_count
+    );
+
+    let mut query_dsl_options = query_string_options.clone();
+
+    // change our search to use the query dsl
+    query_dsl_options.body = json!({
+        "query": {
+            "term": {
+                "host" : {
+                    "value": "a"
+                }
+            }
+        }
+    });
+
+    // verify the right number of search results from the query dsl
+    assert_eq!(
+        logs(&client, query_dsl_options).await.unwrap(),
+        test_record_count
+    );
 }
