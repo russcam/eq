@@ -27,7 +27,7 @@ struct Opt {
     address: String,
 
     /// The number of results to return per batch
-    #[structopt(short, long, default_value = "100")]
+    #[structopt(short, long, default_value = "1000")]
     batch_size: usize,
 
     /// Follow logs, this polls for new results until canceled
@@ -239,6 +239,17 @@ async fn logs(client: &Elasticsearch, options: QueryOptions) -> Result<usize, Er
             if options.limit <= total_hits + options.size {
                 size = options.limit - total_hits
             }
+        }
+
+        // if we're not following, exit early if the previous result was less
+        // than the batch size to avoid an extra query
+        if result.hits().len() < options.size && !options.follow {
+            if options.verbose {
+                eprintln!(
+                    "eq: The previous batch of hits was less then the batch size, assuming we are at the end of our results and exiting the search loop."
+                );
+            }
+            break;
         }
 
         result = search_after(&client, size, options.clone(), sort_values.clone()).await;
