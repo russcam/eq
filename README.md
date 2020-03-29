@@ -18,7 +18,7 @@ API for retrieving multiple batches of results. This can be handy for
 interacting with documents such as logs in a terminal.
 
 ```
-eq 0.2.2
+eq 0.2.3
 A simple command line interface for Elasticsearch queries.
 
 USAGE:
@@ -35,7 +35,7 @@ FLAGS:
 OPTIONS:
     -a, --address <address>          The address of the Elasticsearch server to query [env: ES_ADDRESS=]  [default:
                                      http://localhost:9200]
-    -b, --batch-size <batch-size>    The number of results to return per batch [default: 100]
+    -b, --batch-size <batch-size>    The number of results to return per batch [default: 1000]
     -i, --index <index>              The index to query [default: filebeat-*]
     -l, --limit <limit>              The limit of results to return, 0 means no limit [default: 10000]
     -p, --password <password>        The Elasticsearch password to use [env: ES_PASSWORD]
