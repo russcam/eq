@@ -14,3 +14,9 @@ url = "2.1"
 
 [badges]
 maintenance = { status = "experimental" }
+
+# a few tweaks for reducing the binary size from
+# https://github.com/johnthagen/min-sized-rust
+[profile.release]
+lto = true
+codegen-units = 1
