@@ -25,7 +25,7 @@ USAGE:
     eq [FLAGS] [OPTIONS]
 
 FLAGS:
-    -f, --follow                       Follow logs, this polls for new results until canceled
+    -f, --follow                       Follow results, keep searching for new results until canceled
     -h, --help                         Prints help information
     -j, --json                         Print hits as newline delimited json objects, including all fields
     -n, --no-certificate-validation    Do not validate SSL/TLS certificate of server
@@ -40,10 +40,10 @@ OPTIONS:
     -l, --limit <limit>              The limit of results to return, 0 means no limit [default: 10000]
     -p, --password <password>        The Elasticsearch password to use [env: ES_PASSWORD]
     -q, --query <query>              The query string to search with [default: *]
-    -Q, --query-dsl <query-dsl>      The query dsl json to search with, overrides --query if set [default: {}]
-    -s, --sort <sort>                key:value pairs separated by commas to set sorting parameters for query [default:
+    -Q, --query-dsl <query-dsl>      The query dsl json to search with, overrides --query [default: {}]
+    -s, --sort <sort>                key:value pairs separated by commas to control sorting of results [default:
                                      @timestamp:asc,_id:asc]
-    -u, --username <username>        The Elasticsearch username to authenticate as [env: ES_USERNAME=]
+    -u, --username <username>        The Elasticsearch username to use [env: ES_USERNAME=]
 ```
 
 By default `_source.message` fields of results sorted by `@timestamp` are

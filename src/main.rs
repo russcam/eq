@@ -30,7 +30,7 @@ struct Opt {
     #[structopt(short, long, default_value = "1000")]
     batch_size: usize,
 
-    /// Follow logs, this polls for new results until canceled
+    /// Follow results, keep searching for new results until canceled
     #[structopt(short, long)]
     follow: bool,
 
@@ -59,15 +59,15 @@ struct Opt {
     #[structopt(short, long, default_value = "*")]
     query: String,
 
-    /// The query dsl json to search with, overrides --query if set
+    /// The query dsl json to search with, overrides --query
     #[structopt(short = "Q", long, default_value = "{}")]
     query_dsl: Value,
 
-    /// key:value pairs separated by commas to set sorting parameters for query
+    /// key:value pairs separated by commas to control sorting of results
     #[structopt(short, long, default_value = "@timestamp:asc,_id:asc")]
     sort: String,
 
-    /// The Elasticsearch username to authenticate as
+    /// The Elasticsearch username to use
     #[structopt(short, long, env = "ES_USERNAME")]
     username: Option<String>,
 
@@ -90,6 +90,17 @@ struct QueryOptions {
     follow: bool,
     limit: usize,
     print_json: bool,
+}
+
+impl QueryOptions {
+    pub fn get_limit(&self) -> usize {
+        // if we're following, don't have a limit
+        if self.follow {
+            0
+        } else {
+            self.limit
+        }
+    }
 }
 
 struct SearchResult {
@@ -228,16 +239,16 @@ async fn logs(client: &Elasticsearch, options: QueryOptions) -> Result<usize, Er
         let mut size = options.size;
 
         // if we have a limit
-        if options.limit != 0 {
+        if options.get_limit() != 0 {
             // break if we have reached the limit
-            if options.limit <= total_hits {
-                eprintln!("eq: Limit '{}' reached.", options.limit);
+            if options.get_limit() <= total_hits {
+                eprintln!("eq: Limit '{}' reached.", options.get_limit());
                 break;
             }
 
             // slim down the request size if our next search will hit the limit
-            if options.limit <= total_hits + options.size {
-                size = options.limit - total_hits
+            if options.get_limit() <= total_hits + options.size {
+                size = options.get_limit() - total_hits
             }
         }
 
@@ -277,8 +288,8 @@ async fn search(
     search_after: Vec<Value>,
 ) -> Response {
     // if our limit is smaller than the batch size, use the limit
-    let size = if options.size > options.limit && options.limit > 0 {
-        options.limit
+    let size = if options.size > options.get_limit() && options.get_limit() > 0 {
+        options.get_limit()
     } else {
         options.size
     };
