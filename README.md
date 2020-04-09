@@ -1,6 +1,6 @@
 # Elasticsearch Query CLI (eq)
 
-A command line interface to perform queries on
+A simple command line interface to perform queries on
 [Elasticsearch](https://github.com/elastic/elasticsearch).
 
 This project is under development, no guarantees of version compatibility or
@@ -14,8 +14,8 @@ This uses the Official Elasticsearch Rust Client
 
 `eq` queries Elasticsearch for results and uses the [Search
 After](https://www.elastic.co/guide/en/elasticsearch/reference/7.6/search-request-body.html#request-body-search-search-after)
-API for retrieving multiple batches of results. This can be handy for
-interacting with documents such as logs in a terminal.
+API for retrieving multiple batches of results. This can be useful for
+interacting with documents like logs in a terminal.
 
 ```
 eq 0.2.3
@@ -46,9 +46,10 @@ OPTIONS:
     -u, --username <username>        The Elasticsearch username to authenticate as [env: ES_USERNAME=]
 ```
 
-By default only `_source.message` fields of results are logged to stdout.
+By default `_source.message` fields of results sorted by `@timestamp` are
+logged to stdout.
 
-```sh
+```console
 $ eq --index eq-testing
 log entry 0
 log entry 1
@@ -60,11 +61,11 @@ all fields. A tool like [jq](https://stedolan.github.io/jq/) or
 [gron](https://github.com/tomnomnom/gron) can be used to format or filter
 fields for display as desired.
 
-```sh
-$ eq --index eq-testing --follow --json | jq --compact-output '._source | {"@timestamp","message"}'
-{"@timestamp":"2020-03-10T18:11:38.988Z","message":"log entry 0"}
-{"@timestamp":"2020-03-11T18:11:38.988Z","message":"log entry 1"}
-{"@timestamp":"2020-03-12T18:11:38.988Z","message":"log entry 2"}
+```console
+$ eq --index eq-testing --follow --json | jq --raw-output '._source | "[\(."@timestamp")] \(.message)"'
+[2020-03-10T18:11:38.988Z] log entry 0
+[2020-03-11T18:11:38.988Z] log entry 1
+[2020-03-12T18:11:38.988Z] log entry 2
 ^C
 
 $ eq --index eq-testing --follow --json | gron --stream | grep '_source.message'
@@ -74,11 +75,11 @@ json[2]._source.message = "log entry 2";
 ^C
 ```
 
-`--query` allows [query string
+`--query` allows [Query string
 syntax](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax)
 to be used.
 
-```sh
+```console
 $ eq --query 'agent.hostname: my-server'
 ```
 
@@ -86,7 +87,7 @@ $ eq --query 'agent.hostname: my-server'
 DSL](https://www.elastic.co/guide/en/elasticsearch/reference/7.6/query-dsl.html)
 to be used.
 
-```sh
+```console
 $ eq --query-dsl '
 {
   "query": {
@@ -97,6 +98,17 @@ $ eq --query-dsl '
     }
   }
 }' > my-server.log
+```
+
+# Installation
+
+[Precompiled binaries are available as github releases](https://github.com/Conky5/eq/releases).
+
+If you have the rust tool chain installed, `eq` can be installed with
+`cargo`:
+
+```sh
+cargo +nightly install --git https://github.com/Conky5/eq
 ```
 
 # Development
