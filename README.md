@@ -18,7 +18,7 @@ API for retrieving multiple batches of results. This can be useful for
 interacting with documents like logs in a terminal.
 
 ```
-eq 0.2.4
+eq 0.2.5
 A simple command line interface for Elasticsearch queries.
 
 USAGE:
