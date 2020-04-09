@@ -145,10 +145,13 @@ impl Hit {
     }
 
     pub fn message(&self) -> String {
-        self.value["_source"]["message"]
-            .as_str()
-            .unwrap()
-            .to_string()
+        match self.value["_source"]["message"].as_str() {
+            Some(message) => message.to_string(),
+            None => {
+                eprintln!("eq: Document does not have a _source.message field, try using --json to see all fields.");
+                "".to_string()
+            }
+        }
     }
 
     pub fn json(&self) -> String {
@@ -156,7 +159,10 @@ impl Hit {
     }
 
     pub fn sort(&self) -> Vec<Value> {
-        self.value["sort"].as_array().unwrap().to_vec()
+        match self.value["sort"].as_array() {
+            Some(array) => array.to_vec(),
+            None => panic!("No 'sort' in response, cannot use Search After API, aborting."),
+        }
     }
 }
 
