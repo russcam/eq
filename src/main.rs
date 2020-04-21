@@ -231,7 +231,7 @@ async fn logs(client: &Elasticsearch, options: QueryOptions) -> Result<usize, Er
     let response = search(&client, &options, vec![]).await;
 
     // get the result and hit count, print the logs
-    let body = response.read_body::<Value>().await.unwrap();
+    let body = response.json::<Value>().await.unwrap();
     let mut result = SearchResult::new(body);
     let hits = result.hits();
     print_logs(options.print_json, &hits);
@@ -362,7 +362,7 @@ async fn search_after(
     options.size = size;
 
     let response = search(&client, &options, sort_values).await;
-    let body = response.read_body::<Value>().await.unwrap();
+    let body = response.json::<Value>().await.unwrap();
 
     SearchResult::new(body)
 }
@@ -379,7 +379,7 @@ async fn verify_response(response_result: Result<Response, Error>) -> Response {
                     "eq: response body:\n{}",
                     to_string_pretty(
                         &response
-                            .read_body::<Value>()
+                            .json::<Value>()
                             .await
                             .expect("Could not get response body for failed search.")
                     )
