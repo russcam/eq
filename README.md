@@ -108,16 +108,12 @@ If you have the rust tool chain installed, `eq` can be installed with
 `cargo`:
 
 ```sh
-cargo +nightly install --git https://github.com/Conky5/eq
+cargo install --git https://github.com/Conky5/eq
 ```
 
 # Development
 
-Get [rustup](https://rustup.rs) and install the nightly compiler builds:
-
-```sh
-rustup toolchain install nightly
-```
+Get [rustup](https://rustup.rs).
 
 Run [cargo](https://doc.rust-lang.org/cargo/) commands for different tasks:
 
