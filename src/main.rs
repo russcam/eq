@@ -145,10 +145,9 @@ impl Hit {
     pub fn message(&self) -> &str {
         match self.value["_source"]["message"].as_str() {
             Some(message) => message,
-            None => {
-                eprintln!("eq: Document does not have a _source.message field, try using --json to see all fields.");
-                ""
-            }
+            None => panic!(
+                "eq: Document does not have a _source.message field, use --json to get all fields."
+            ),
         }
     }
 
