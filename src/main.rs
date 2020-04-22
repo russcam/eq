@@ -1,16 +1,14 @@
-use elasticsearch::auth::Credentials;
-use elasticsearch::cert::CertificateValidation;
-use elasticsearch::http::response::Response;
-use elasticsearch::http::transport::SingleNodeConnectionPool;
-use elasticsearch::http::transport::TransportBuilder;
-use elasticsearch::{Elasticsearch, Error, SearchParts};
-use serde_json::json;
-use serde_json::to_string_pretty;
-use serde_json::Value;
-use std::convert::TryInto;
-use std::process::exit;
-use std::thread::sleep;
-use std::time::Duration;
+use elasticsearch::{
+    auth::Credentials,
+    cert::CertificateValidation,
+    http::{
+        response::Response,
+        transport::{SingleNodeConnectionPool, TransportBuilder},
+    },
+    Elasticsearch, Error, SearchParts,
+};
+use serde_json::{json, to_string_pretty, Value};
+use std::{convert::TryInto, process::exit, thread::sleep, time::Duration};
 use structopt::StructOpt;
 use url::Url;
 
@@ -303,10 +301,10 @@ async fn search(
     let mut body = options.body.clone();
 
     // if we have an empty search body, use the query_string
-    if body == json!({}) {
-        body = add_to_serde_value(
-            body,
-            "query".to_string(),
+    if body.as_object().unwrap().is_empty() {
+        add_to_serde_value(
+            &mut body,
+            "query",
             json!({
                 "query_string": {
                     "query": options.query_string,
@@ -319,11 +317,7 @@ async fn search(
     if !search_after.is_empty() {
         // modify the query body to include the "search_after" argument
         // https://www.elastic.co/guide/en/elasticsearch/reference/7.6/search-request-body.html#request-body-search-search-after
-        body = add_to_serde_value(
-            body.clone(),
-            "search_after".to_string(),
-            json!(search_after),
-        );
+        add_to_serde_value(&mut body, "search_after", json!(search_after));
     };
 
     if options.verbose {
@@ -396,21 +390,20 @@ async fn verify_response(response_result: Result<Response, Error>) -> Response {
     }
 }
 
-// this seems waay too complicated to add to some existing Value, there is probably a way better
-// way to go about this
-fn add_to_serde_value(existing_value: Value, key_to_add: String, value_to_add: Value) -> Value {
-    let mut map: serde_json::Map<String, Value> = existing_value.as_object().unwrap().clone();
-    map.insert(key_to_add, value_to_add);
-    map.into()
+fn add_to_serde_value<S: Into<String>>(
+    existing_value: &mut Value,
+    key_to_add: S,
+    value_to_add: Value,
+) {
+    let map = existing_value.as_object_mut().unwrap();
+    map.insert(key_to_add.into(), value_to_add);
 }
 
 #[test]
 fn add_to_existing_json_test() {
-    let json: Value = json!({"a": 1});
-    assert_eq!(
-        add_to_serde_value(json, "b".to_string(), json!(2)),
-        json!({"a": 1, "b": 2})
-    );
+    let mut json: Value = json!({"a": 1});
+    add_to_serde_value(&mut json, "b", json!(2));
+    assert_eq!(json, json!({"a": 1, "b": 2}));
 }
 
 #[tokio::test]
