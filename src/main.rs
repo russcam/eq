@@ -330,13 +330,29 @@ async fn search(
         eprintln!("eq: Search body: {:?}", body.to_string());
     }
 
-    let response_result = client
-        .search(SearchParts::Index(&[&options.index]))
-        .size(size.try_into().unwrap())
-        .body(body)
-        .sort(&[&options.sort])
-        .send()
-        .await;
+    let index: &[&str] = &[&options.index];
+    let sort: &[&str] = &[&options.sort];
+
+    let response_result = if options.print_json {
+        client
+            .search(SearchParts::Index(index))
+            .size(size.try_into().unwrap())
+            .body(body)
+            .sort(sort)
+            .send()
+            .await
+    } else {
+        // filter down to only the fields we need when we're not logging the
+        // full json document
+        client
+            .search(SearchParts::Index(index))
+            .size(size.try_into().unwrap())
+            .body(body)
+            .sort(sort)
+            .filter_path(&[&*"hits.hits._source.message,hits.hits.sort"])
+            .send()
+            .await
+    };
 
     verify_response(response_result).await
 }
