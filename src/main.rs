@@ -224,7 +224,7 @@ async fn main() {
         .expect("Unable to get logs from Elasticsearch.");
 }
 
-async fn logs(client: &Elasticsearch, options: QueryOptions) -> Result<usize, Error> {
+async fn logs(client: &Elasticsearch, mut options: QueryOptions) -> Result<usize, Error> {
     // do the first search
     let response = search(&client, &options, vec![]).await;
 
@@ -267,7 +267,12 @@ async fn logs(client: &Elasticsearch, options: QueryOptions) -> Result<usize, Er
             break;
         }
 
-        result = search_after(&client, size, options.clone(), sort_values.clone()).await;
+        // update the size option if it's been modified
+        options.size = size;
+        let response = search(&client, &options, sort_values.clone()).await;
+        let body = response.json::<Value>().await.unwrap();
+        result = SearchResult::new(body);
+
         total_hits += result.hits().len();
         print_logs(options.print_json, &result.hits());
 
@@ -344,21 +349,6 @@ fn print_logs(print_json: bool, hits: &[Hit]) {
             println!("{}", hit.message())
         }
     }
-}
-
-async fn search_after(
-    client: &Elasticsearch,
-    size: usize,
-    mut options: QueryOptions,
-    sort_values: Vec<Value>,
-) -> SearchResult {
-    // set the search size to what we were given
-    options.size = size;
-
-    let response = search(&client, &options, sort_values).await;
-    let body = response.json::<Value>().await.unwrap();
-
-    SearchResult::new(body)
 }
 
 async fn verify_response(response_result: Result<Response, Error>) -> Response {
