@@ -330,8 +330,8 @@ async fn search(
         eprintln!("eq: Search body: {:?}", body.to_string());
     }
 
-    let index: &[&str] = &[&options.index];
-    let sort: &[&str] = &[&options.sort];
+    let index = &[options.index.as_str()];
+    let sort = &[options.sort.as_str()];
 
     let response_result = if options.print_json {
         client
